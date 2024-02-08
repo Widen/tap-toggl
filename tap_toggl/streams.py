@@ -327,7 +327,7 @@ class TimeEntriesStream(TogglStream):
         th.Property("start", th.DateTimeType),
         th.Property("stop", th.DateTimeType),
         th.Property("tag_ids", th.ArrayType(th.IntegerType)),
-        th.Property("tag_ids", th.ArrayType(th.StringType)),
+        th.Property("tags", th.ArrayType(th.StringType)),
         th.Property("task_id", th.IntegerType),
         th.Property("task_name", th.StringType),
         th.Property("tid", th.IntegerType),

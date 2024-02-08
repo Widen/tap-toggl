@@ -4,25 +4,13 @@
 
 Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
 
-<!--
-
-Developer TODO: Update the below as needed to correctly describe the install procedure. For instance, if you do not have a PyPi repo, or if you want users to directly install from your git repo, you can modify this step as appropriate.
-
 ## Installation
-
-Install from PyPi:
-
-```bash
-pipx install tap-toggl
-```
 
 Install from GitHub:
 
 ```bash
-pipx install git+https://github.com/ORG_NAME/tap-toggl.git@main
+pipx install git+https://github.com/Widen/tap-toggl.git
 ```
-
--->
 
 ## Configuration
 
@@ -37,6 +25,20 @@ This section can be created by copy-pasting the CLI output from:
 tap-toggl --about --format=markdown
 ```
 -->
+
+| Setting                      | Required | Default | Description |
+|:-----------------------------|:--------:|:-------:|:------------|
+| api_token                    | True     | None    | The token to authenticate against the Toggl API |
+| detailed_report_trailing_days| False    |       1 | Provided for backwards compatibility. Does nothing. |
+| start_date                   | False    |         | The earliest record date to sync. In the format YYYY-MM-DD. |
+| user_agent                   | False    |         | Inserts a user agent into the request header |
+| stream_maps                  | False    | None    | Config object for stream maps capability. For more information check out [Stream Maps](https://sdk.meltano.com/en/latest/stream_maps.html). |
+| stream_map_config            | False    | None    | User-defined config values to be used within map expressions. |
+| faker_config                 | False    | None    | Config for the [`Faker`](https://faker.readthedocs.io/en/master/) instance variable `fake` used within map expressions. Only applicable if the plugin specifies `faker` as an addtional dependency (through the `singer-sdk` `faker` extra or directly). |
+| flattening_enabled           | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
+| flattening_max_depth         | False    | None    | The max depth to flatten schemas. |
+| batch_config                 | False    | None    |             |
+
 
 A full list of supported settings and capabilities for this
 tap is available by running:
@@ -53,9 +55,7 @@ environment variable is set either in the terminal context or in the `.env` file
 
 ### Source Authentication and Authorization
 
-<!--
-Developer TODO: If your tap requires special access on the source system, or any special authentication requirements, provide those here.
--->
+See https://developers.track.toggl.com/docs/authentication for more information on how to obtain an API token. Only the api_token authentication method is supported.
 
 ## Usage
 
@@ -99,12 +99,6 @@ poetry run tap-toggl --help
 
 _**Note:** This tap will work in any Singer environment and does not require Meltano.
 Examples here are for convenience and to streamline end-to-end orchestration scenarios._
-
-<!--
-Developer TODO:
-Your project comes with a custom `meltano.yml` project file already created. Open the `meltano.yml` and follow any "TODO" items listed in
-the file.
--->
 
 Next, install Meltano (if you haven't already) and any needed plugins:
 

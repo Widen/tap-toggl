@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Callable, Iterable
+from base64 import b64encode
+from datetime import datetime
+from typing import Any, Callable
 
 import requests
-from singer_sdk.authenticators import BasicAuthenticator
-from singer_sdk.helpers.jsonpath import extract_jsonpath
-from singer_sdk.pagination import BaseAPIPaginator  # noqa: TCH002
+from singer_sdk.pagination import BasePageNumberPaginator, BaseAPIPaginator
 from singer_sdk.streams import RESTStream
 
 if sys.version_info >= (3, 9):
@@ -18,9 +18,6 @@ else:
 
 _Auth = Callable[[requests.PreparedRequest], requests.PreparedRequest]
 
-# TODO: Delete this is if not using json files for schema definition
-SCHEMAS_DIR = importlib_resources.files(__package__) / "schemas"
-
 
 class TogglStream(RESTStream):
     """Toggl stream class."""
@@ -28,26 +25,9 @@ class TogglStream(RESTStream):
     @property
     def url_base(self) -> str:
         """Return the API URL root, configurable via tap settings."""
-        # TODO: hardcode a value here, or retrieve it from self.config
-        return "https://api.mysample.com"
+        return "https://api.track.toggl.com/api/v9"
 
-    records_jsonpath = "$[*]"  # Or override `parse_response`.
-
-    # Set this value or override `get_new_paginator`.
-    next_page_token_jsonpath = "$.next_page"  # noqa: S105
-
-    @property
-    def authenticator(self) -> BasicAuthenticator:
-        """Return a new authenticator object.
-
-        Returns:
-            An authenticator instance.
-        """
-        return BasicAuthenticator.create_for_stream(
-            self,
-            username=self.config.get("username", ""),
-            password=self.config.get("password", ""),
-        )
+    records_jsonpath = "$[*]"
 
     @property
     def http_headers(self) -> dict:
@@ -56,32 +36,46 @@ class TogglStream(RESTStream):
         Returns:
             A dictionary of HTTP headers.
         """
-        headers = {}
+        auth_str = bytes(f"{self.config.get('api_token')}:api_token", 'utf-8')
+        encoded_token = b64encode(auth_str).decode("ascii")
+        headers = {"content-type": "application/json"}
+        if "api_token" in self.config:
+            headers["Authorization"] = f"Basic {encoded_token}"
+        else:
+            self.logger.error("No API token provided")
         if "user_agent" in self.config:
             headers["User-Agent"] = self.config.get("user_agent")
-        # If not using an authenticator, you may also provide inline auth headers:
-        # headers["Private-Token"] = self.config.get("auth_token")  # noqa: ERA001
         return headers
 
-    def get_new_paginator(self) -> BaseAPIPaginator:
-        """Create a new pagination helper instance.
+    def start_time_to_epoch(self, start_time: str) -> int:
+        """Convert a start time to an epoch time.
 
-        If the source API can make use of the `next_page_token_jsonpath`
-        attribute, or it contains a `X-Next-Page` header in the response
-        then you can remove this method.
-
-        If you need custom pagination that uses page numbers, "next" links, or
-        other approaches, please read the guide: https://sdk.meltano.com/en/v0.25.0/guides/pagination-classes.html.
+        Args:
+            start_time: The start time.
 
         Returns:
-            A pagination helper instance.
+            The epoch time.
         """
-        return super().get_new_paginator()
+        utc_time = datetime.strptime(start_time, "%Y-%m-%d")
+        epoch_time = (utc_time - datetime(1970, 1, 1)).total_seconds()
+        return int(epoch_time)
+
+
+class TogglPaginationStream(TogglStream):
+    """Toggl stream class with pagination variation."""
+
+    def get_new_paginator(self) -> BaseAPIPaginator:
+        """Get a fresh paginator for this API endpoint.
+
+        Returns:
+            A paginator instance.
+        """
+        return BasePageNumberPaginator(1)
 
     def get_url_params(
-        self,
-        context: dict | None,  # noqa: ARG002
-        next_page_token: Any | None,  # noqa: ANN401
+            self,
+            context: dict | None,  # noqa: ARG002
+            next_page_token: Any | None,  # noqa: ANN401
     ) -> dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization.
 
@@ -93,57 +87,11 @@ class TogglStream(RESTStream):
             A dictionary of URL query parameters.
         """
         params: dict = {}
+        if self.config.get("start_date"):
+            params["since"] = self.start_time_to_epoch(self.config.get("start_date"))
         if next_page_token:
             params["page"] = next_page_token
         if self.replication_key:
-            params["sort"] = "asc"
-            params["order_by"] = self.replication_key
+            params["sort_order"] = "asc"
+            params["sort_field"] = self.replication_key
         return params
-
-    def prepare_request_payload(
-        self,
-        context: dict | None,  # noqa: ARG002
-        next_page_token: Any | None,  # noqa: ARG002, ANN401
-    ) -> dict | None:
-        """Prepare the data payload for the REST API request.
-
-        By default, no payload will be sent (return None).
-
-        Args:
-            context: The stream context.
-            next_page_token: The next page index or value.
-
-        Returns:
-            A dictionary with the JSON body for a POST requests.
-        """
-        # TODO: Delete this method if no payload is required. (Most REST APIs.)
-        return None
-
-    def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        """Parse the response and return an iterator of result records.
-
-        Args:
-            response: The HTTP ``requests.Response`` object.
-
-        Yields:
-            Each record from the source.
-        """
-        # TODO: Parse response body and return a set of records.
-        yield from extract_jsonpath(self.records_jsonpath, input=response.json())
-
-    def post_process(
-        self,
-        row: dict,
-        context: dict | None = None,  # noqa: ARG002
-    ) -> dict | None:
-        """As needed, append or transform raw data to match expected structure.
-
-        Args:
-            row: An individual record from the stream.
-            context: The stream context.
-
-        Returns:
-            The updated record dictionary, or ``None`` to skip the record.
-        """
-        # TODO: Delete this method if not needed.
-        return row

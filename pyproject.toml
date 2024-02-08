@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Acquia-tap-toggl"
+name = "acquia-tap-toggl"
 version = "0.0.1"
 description = "`tap-toggl` is a Singer tap for Toggl, built with the Meltano Singer SDK."
 readme = "README.md"
@@ -11,7 +11,6 @@ keywords = [
 classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -32,6 +31,8 @@ requests = "~=2.31.0"
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.0"
 singer-sdk = { version="~=0.35.0", extras = ["testing"] }
+requests-mock = "^1.9.3"
+pytest-dotenv = "*.*.*"
 
 [tool.poetry.extras]
 s3 = ["fs-s3fs"]

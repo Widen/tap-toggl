@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from singer_sdk import Tap
-from singer_sdk import typing as th  # JSON schema typing helpers
+from singer_sdk import typing as th
 
-# TODO: Import your custom stream types here:
 from tap_toggl import streams
 
 
@@ -14,31 +13,34 @@ class TapToggl(Tap):
 
     name = "tap-toggl"
 
-    # TODO: Update this section with the actual config values you expect:
     config_jsonschema = th.PropertiesList(
         th.Property(
-            "auth_token",
+            "api_token",
             th.StringType,
             required=True,
-            secret=True,  # Flag config as protected.
-            description="The token to authenticate against the API service",
+            secret=True,
+            description="The token to authenticate against the Toggl API",
         ),
         th.Property(
-            "project_ids",
-            th.ArrayType(th.StringType),
-            required=True,
-            description="Project IDs to replicate",
+            "detailed_report_trailing_days",
+            th.IntegerType,
+            required=False,
+            default=1,
+            description="Provided for backwards compatibility. Does nothing.",
         ),
         th.Property(
             "start_date",
             th.DateTimeType,
-            description="The earliest record date to sync",
+            required=False,
+            default="",
+            description="The earliest record date to sync. In the format YYYY-MM-DD.",
         ),
         th.Property(
-            "api_url",
+            "user_agent",
             th.StringType,
-            default="https://api.mysample.com",
-            description="The url for the API service",
+            required=False,
+            default="",
+            description="Inserts a user agent into the request header",
         ),
     ).to_dict()
 
@@ -49,8 +51,15 @@ class TapToggl(Tap):
             A list of discovered streams.
         """
         return [
+            streams.ClientsStream(self),
             streams.GroupsStream(self),
+            streams.OrganizationsStream(self),
+            streams.ProjectsStream(self),
+            streams.TasksStream(self),
+            streams.TagsStream(self),
+            streams.TimeEntriesStream(self),
             streams.UsersStream(self),
+            streams.WorkspacesStream(self),
         ]
 
 

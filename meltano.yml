@@ -15,15 +15,25 @@ plugins:
     - discover
     - about
     - stream-maps
-    config:
-      start_date: '2010-01-01T00:00:00Z'
     settings:
-    # TODO: To configure using Meltano, declare settings and their types here:
-    - name: username
-    - name: password
+    - name: api_token
       kind: password
+    - name: detailed_report_trailing_days
+      kind: integer
     - name: start_date
-      value: '2010-01-01T00:00:00Z'
+      kind: string
+    - name: user_agent
+      kind: string
+    select:
+      - clients.*
+      - groups.*
+      - organizations.*
+      - projects.*
+      - tasks.*
+      - tags.*
+      - time_entries.*
+      - users.*
+      - workspaces.*
   loaders:
   - name: target-jsonl
     variant: andyh1203

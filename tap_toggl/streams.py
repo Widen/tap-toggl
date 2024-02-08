@@ -232,7 +232,7 @@ class ProjectsStream(TogglPaginationStream):
             th.Property("end_date", th.DateTimeType),
             th.Property("start_date", th.DateTimeType),
         )),
-        th.Property("string", th.StringType),
+        th.Property("end_date", th.DateTimeType),
         th.Property("estimated_hours", th.IntegerType),
         th.Property("estimated_seconds", th.IntegerType),
         th.Property("fixed_fee", th.NumberType),

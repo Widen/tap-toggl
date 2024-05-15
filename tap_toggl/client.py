@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from base64 import b64encode
 from datetime import datetime
 from typing import Any, Callable
@@ -17,12 +16,12 @@ _Auth = Callable[[requests.PreparedRequest], requests.PreparedRequest]
 class TogglStream(RESTStream):
     """Toggl stream class."""
 
+    records_jsonpath = "$[*]"
+
     @property
     def url_base(self) -> str:
         """Return the API URL root, configurable via tap settings."""
         return "https://api.track.toggl.com"
-
-    records_jsonpath = "$[*]"
 
     @property
     def http_headers(self) -> dict:

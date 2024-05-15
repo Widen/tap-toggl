@@ -5,7 +5,9 @@ from __future__ import annotations
 import sys
 import typing as t
 
+import requests
 from singer_sdk import typing as th
+from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.pagination import BaseAPIPaginator, SimpleHeaderPaginator
 
 from tap_toggl.client import TogglStream, TogglPaginationStream
@@ -338,7 +340,7 @@ class TimeEntriesStream(TogglStream):
     name = "time_entries"
     path = "/reports/api/v3/workspace/{workspace_id}/search/time_entries"
     rest_method = "POST"
-    primary_keys: t.ClassVar[list[str]] = ["time_entries"]
+    primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = None
     schema = th.PropertiesList(
         th.Property("billable", th.BooleanType),
@@ -350,18 +352,11 @@ class TimeEntriesStream(TogglStream):
         th.Property("row_number", th.IntegerType),
         th.Property("tag_ids", th.ArrayType(th.IntegerType)),
         th.Property("task_id", th.IntegerType),
-        th.Property(
-            "time_entries",
-            th.ArrayType(
-                th.ObjectType(
-                    th.Property("at", th.DateTimeType),
-                    th.Property("id", th.IntegerType),
-                    th.Property("seconds", th.IntegerType),
-                    th.Property("start", th.DateTimeType),
-                    th.Property("stop", th.DateTimeType),
-                )
-            ),
-        ),
+        th.Property("at", th.DateTimeType),
+        th.Property("id", th.IntegerType),
+        th.Property("seconds", th.IntegerType),
+        th.Property("start", th.DateTimeType),
+        th.Property("stop", th.DateTimeType),
         th.Property("user_id", th.IntegerType),
         th.Property("username", th.StringType),
         th.Property("workspace_id", th.IntegerType),
@@ -396,6 +391,23 @@ class TimeEntriesStream(TogglStream):
             A paginator instance.
         """
         return SimpleHeaderPaginator("X-Next-Row-Number")
+
+    def parse_response(self, response: requests.Response) -> t.Iterable[dict]:
+        """Parse the response and return an iterator of result records.
+
+        Args:
+            response: A raw :class:`requests.Response`
+
+        Yields:
+            One item for every item found in the response.
+        """
+        data = response.json()
+        records = extract_jsonpath(self.records_jsonpath, input=data)
+        for record in records:
+            for time_entry in record.get('time_entries', []):
+                del record["time_entries"]
+                record = {**record, **time_entry}
+                yield record
 
     def post_process(
         self,

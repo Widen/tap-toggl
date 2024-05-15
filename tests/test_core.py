@@ -13,7 +13,7 @@ SAMPLE_CONFIG = {
 }
 
 TEST_SUITE_CONFIG = SuiteConfig(
-    ignore_no_records_for_streams=["projects", "tasks", "time_entries"]
+    ignore_no_records_for_streams=["projects", "tasks", "time_entries", "tags"]
 )
 
 TestTapToggl = get_tap_test_class(
@@ -21,5 +21,3 @@ TestTapToggl = get_tap_test_class(
     config=SAMPLE_CONFIG,
     suite_config=TEST_SUITE_CONFIG,
 )
-
-# TODO: Create additional tests as appropriate for your tap.

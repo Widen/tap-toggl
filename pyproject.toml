@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "acquia-tap-toggl"
-version = "0.0.1"
+version = "0.1.0"
 description = "`tap-toggl` is a Singer tap for Toggl, built with the Meltano Singer SDK."
 readme = "README.md"
 authors = ["Josh Lloyd <josh.lloyd@acquia.com>"]

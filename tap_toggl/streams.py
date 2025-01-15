@@ -376,6 +376,7 @@ class TimeEntriesStream(TogglStream):
         """
         payload = {
             "start_date": self.config.get("start_date"),
+            "end_date": self.config.get("end_date"),
             "page_size": 10000,
         }
 

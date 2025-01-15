@@ -31,7 +31,6 @@ tap-toggl --about --format=markdown
 | api_token                    | True     | None    | The token to authenticate against the Toggl API |
 | detailed_report_trailing_days| False    |       1 | Provided for backwards compatibility. Does nothing. |
 | start_date                   | False    |         | The earliest record date to sync. In the format YYYY-MM-DD. |
-| user_agent                   | False    |         | Inserts a user agent into the request header |
 | stream_maps                  | False    | None    | Config object for stream maps capability. For more information check out [Stream Maps](https://sdk.meltano.com/en/latest/stream_maps.html). |
 | stream_map_config            | False    | None    | User-defined config values to be used within map expressions. |
 | faker_config                 | False    | None    | Config for the [`Faker`](https://faker.readthedocs.io/en/master/) instance variable `fake` used within map expressions. Only applicable if the plugin specifies `faker` as an addtional dependency (through the `singer-sdk` `faker` extra or directly). |

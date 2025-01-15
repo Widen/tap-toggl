@@ -5,21 +5,21 @@ from __future__ import annotations
 import sys
 import typing as t
 
+import requests
 from singer_sdk import typing as th
+from singer_sdk.helpers.jsonpath import extract_jsonpath
+from singer_sdk.pagination import BaseAPIPaginator, SimpleHeaderPaginator
 
 from tap_toggl.client import TogglStream, TogglPaginationStream
 
-if sys.version_info >= (3, 9):
-    import importlib.resources as importlib_resources
-else:
-    import importlib_resources
+_TToken = t.TypeVar("_TToken")
 
 
 class ClientsStream(TogglStream):
     """Define custom stream."""
 
     name = "clients"
-    path = "/me/clients"
+    path = "/api/v9/me/clients"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -36,7 +36,7 @@ class OrganizationsStream(TogglStream):
     """Define custom stream."""
 
     name = "organizations"
-    path = "/me/organizations"
+    path = "/api/v9/me/organizations"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -55,13 +55,16 @@ class OrganizationsStream(TogglStream):
         th.Property("pricing_plan_id", th.IntegerType),
         th.Property("server_deleted_at", th.DateTimeType),
         th.Property("suspended_at", th.DateTimeType),
-        th.Property("trial_info", th.ObjectType(
-            th.Property("last_pricing_plan_id", th.IntegerType),
-            th.Property("next_payment_date", th.DateTimeType),
-            th.Property("trial", th.BooleanType),
-            th.Property("trial_available", th.BooleanType),
-            th.Property("trial_end_date", th.DateTimeType),
-        )),
+        th.Property(
+            "trial_info",
+            th.ObjectType(
+                th.Property("last_pricing_plan_id", th.IntegerType),
+                th.Property("next_payment_date", th.DateTimeType),
+                th.Property("trial", th.BooleanType),
+                th.Property("trial_available", th.BooleanType),
+                th.Property("trial_end_date", th.DateTimeType),
+            ),
+        ),
         th.Property("user_count", th.IntegerType),
     ).to_dict()
 
@@ -77,7 +80,7 @@ class GroupsStream(TogglStream):
 
     parent_stream_type = OrganizationsStream
     name = "groups"
-    path = "/organizations/{organization_id}/groups"
+    path = "/api/v9/organizations/{organization_id}/groups"
     primary_keys: t.ClassVar[list[str]] = ["group_id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -86,12 +89,17 @@ class GroupsStream(TogglStream):
         th.Property("name", th.StringType),
         th.Property("permissions", th.StringType),
         th.Property("organization_id", th.IntegerType),
-        th.Property("users", th.ArrayType(th.ObjectType(
-            th.Property("avatar_url", th.StringType),
-            th.Property("joined", th.BooleanType),
-            th.Property("name", th.StringType),
-            th.Property("user_id", th.IntegerType),
-        ))),
+        th.Property(
+            "users",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("avatar_url", th.StringType),
+                    th.Property("joined", th.BooleanType),
+                    th.Property("name", th.StringType),
+                    th.Property("user_id", th.IntegerType),
+                )
+            ),
+        ),
         th.Property("workspaces", th.ArrayType(th.IntegerType)),
     ).to_dict()
 
@@ -101,7 +109,7 @@ class UsersStream(TogglPaginationStream):
 
     parent_stream_type = OrganizationsStream
     name = "users"
-    path = "/organizations/{organization_id}/users"
+    path = "/api/v9/organizations/{organization_id}/users"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = None
     schema = th.PropertiesList(
@@ -109,10 +117,15 @@ class UsersStream(TogglPaginationStream):
         th.Property("avatar_url", th.StringType),
         th.Property("can_edit_email", th.BooleanType),
         th.Property("email", th.StringType),
-        th.Property("groups", th.ArrayType(th.ObjectType(
-            th.Property("group_id", th.IntegerType),
-            th.Property("name", th.StringType),
-        ))),
+        th.Property(
+            "groups",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("group_id", th.IntegerType),
+                    th.Property("name", th.StringType),
+                )
+            ),
+        ),
         th.Property("id", th.IntegerType),
         th.Property("inactive", th.BooleanType),
         th.Property("invitation_code", th.StringType),
@@ -121,19 +134,24 @@ class UsersStream(TogglPaginationStream):
         th.Property("owner", th.BooleanType),
         th.Property("organization_id", th.IntegerType),
         th.Property("user_id", th.IntegerType),
-        th.Property("workspaces", th.ArrayType(th.ObjectType(
-            th.Property("admin", th.BooleanType),
-            th.Property("inactive", th.BooleanType),
-            th.Property("name", th.StringType),
-            th.Property("role", th.StringType),
-            th.Property("workspace_id", th.IntegerType),
-        ))),
+        th.Property(
+            "workspaces",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("admin", th.BooleanType),
+                    th.Property("inactive", th.BooleanType),
+                    th.Property("name", th.StringType),
+                    th.Property("role", th.StringType),
+                    th.Property("workspace_id", th.IntegerType),
+                )
+            ),
+        ),
     ).to_dict()
 
     def get_url_params(
-            self,
-            context: dict | None,  # noqa: ARG002
-            next_page_token: t.Any | None,  # noqa: ANN401
+        self,
+        context: dict | None,  # noqa: ARG002
+        next_page_token: t.Any | None,  # noqa: ANN401
     ) -> dict[str, t.Any]:
         """Return a dictionary of values to be used in URL parameterization.
 
@@ -156,7 +174,7 @@ class WorkspacesStream(TogglStream):
 
     # parent_stream_type = OrganizationsStream
     name = "workspaces"
-    path = "/me/workspaces"
+    path = "/api/v9/me/workspaces"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -191,13 +209,16 @@ class WorkspacesStream(TogglStream):
         th.Property("rounding_minutes", th.IntegerType),
         th.Property("server_deleted_at", th.DateTimeType),
         th.Property("suspended_at", th.DateTimeType),
-        th.Property("te_constraints", th.ObjectType(
-            th.Property("description_present", th.BooleanType),
-            th.Property("project_present", th.BooleanType),
-            th.Property("tag_present", th.BooleanType),
-            th.Property("task_present", th.BooleanType),
-            th.Property("time_entry_constraints_enabled", th.BooleanType),
-        )),
+        th.Property(
+            "te_constraints",
+            th.ObjectType(
+                th.Property("description_present", th.BooleanType),
+                th.Property("project_present", th.BooleanType),
+                th.Property("tag_present", th.BooleanType),
+                th.Property("task_present", th.BooleanType),
+                th.Property("time_entry_constraints_enabled", th.BooleanType),
+            ),
+        ),
         th.Property("working_hours_in_minutes", th.IntegerType),
     ).to_dict()
 
@@ -213,7 +234,8 @@ class ProjectsStream(TogglPaginationStream):
 
     parent_stream_type = WorkspacesStream
     name = "projects"
-    path = "/workspaces/{workspace_id}/projects"
+    path = "/api/v9/workspaces/{workspace_id}/projects"
+    rest_method = "GET"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -228,10 +250,13 @@ class ProjectsStream(TogglPaginationStream):
         th.Property("color", th.StringType),
         th.Property("created_at", th.DateTimeType),
         th.Property("currency", th.StringType),
-        th.Property("current_period", th.ObjectType(
-            th.Property("end_date", th.DateTimeType),
-            th.Property("start_date", th.DateTimeType),
-        )),
+        th.Property(
+            "current_period",
+            th.ObjectType(
+                th.Property("end_date", th.DateTimeType),
+                th.Property("start_date", th.DateTimeType),
+            ),
+        ),
         th.Property("end_date", th.DateTimeType),
         th.Property("estimated_hours", th.IntegerType),
         th.Property("estimated_seconds", th.IntegerType),
@@ -243,14 +268,19 @@ class ProjectsStream(TogglPaginationStream):
         th.Property("rate", th.NumberType),
         th.Property("rate_last_updated", th.DateTimeType),
         th.Property("recurring", th.BooleanType),
-        th.Property("recurring_parameters", th.ArrayType(th.ObjectType(
-            th.Property("custom_period", th.IntegerType),
-            th.Property("estimated_seconds", th.IntegerType),
-            th.Property("parameter_end_date", th.DateTimeType),
-            th.Property("parameter_start_date", th.DateTimeType),
-            th.Property("period", th.StringType),
-            th.Property("project_start_date", th.DateTimeType),
-        ))),
+        th.Property(
+            "recurring_parameters",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("custom_period", th.IntegerType),
+                    th.Property("estimated_seconds", th.IntegerType),
+                    th.Property("parameter_end_date", th.DateTimeType),
+                    th.Property("parameter_start_date", th.DateTimeType),
+                    th.Property("period", th.StringType),
+                    th.Property("project_start_date", th.DateTimeType),
+                )
+            ),
+        ),
         th.Property("server_deleted_at", th.DateTimeType),
         th.Property("start_date", th.DateTimeType),
         th.Property("status", th.StringType),
@@ -266,7 +296,7 @@ class TasksStream(TogglPaginationStream):
 
     parent_stream_type = WorkspacesStream
     name = "tasks"
-    path = "/workspaces/{workspace_id}/tasks"
+    path = "/api/v9/workspaces/{workspace_id}/tasks"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     records_jsonpath = "$.data[*]"
@@ -290,7 +320,7 @@ class TagsStream(TogglStream):
 
     parent_stream_type = WorkspacesStream
     name = "tags"
-    path = "/workspaces/{workspace_id}/tags"
+    path = "/api/v9/workspaces/{workspace_id}/tags"
     primary_keys: t.ClassVar[list[str]] = ["id"]
     replication_key = "at"
     schema = th.PropertiesList(
@@ -306,52 +336,85 @@ class TagsStream(TogglStream):
 class TimeEntriesStream(TogglStream):
     """Define custom stream."""
 
+    parent_stream_type = WorkspacesStream
     name = "time_entries"
-    path = "/me/time_entries"
+    path = "/reports/api/v3/workspace/{workspace_id}/search/time_entries"
+    rest_method = "POST"
     primary_keys: t.ClassVar[list[str]] = ["id"]
-    replication_key = "at"
+    replication_key = None
     schema = th.PropertiesList(
-        th.Property("at", th.DateTimeType),
         th.Property("billable", th.BooleanType),
-        th.Property("client_name", th.StringType),
+        th.Property("billable_amount_in_cents", th.IntegerType),
+        th.Property("currency", th.StringType),
         th.Property("description", th.StringType),
-        th.Property("duration", th.IntegerType),
-        th.Property("duronly", th.BooleanType),
-        th.Property("id", th.IntegerType),
-        th.Property("pid", th.IntegerType),
-        th.Property("project_active", th.BooleanType),
-        th.Property("project_color", th.StringType),
+        th.Property("hourly_rate_in_cents", th.IntegerType),
         th.Property("project_id", th.IntegerType),
-        th.Property("project_name", th.StringType),
-        th.Property("server_deleted_at", th.DateTimeType),
+        th.Property("row_number", th.IntegerType),
+        th.Property("tag_ids", th.ArrayType(th.IntegerType)),
+        th.Property("task_id", th.IntegerType),
+        th.Property("at", th.DateTimeType),
+        th.Property("id", th.IntegerType),
+        th.Property("seconds", th.IntegerType),
         th.Property("start", th.DateTimeType),
         th.Property("stop", th.DateTimeType),
-        th.Property("tag_ids", th.ArrayType(th.IntegerType)),
-        th.Property("tags", th.ArrayType(th.StringType)),
-        th.Property("task_id", th.IntegerType),
-        th.Property("task_name", th.StringType),
-        th.Property("tid", th.IntegerType),
-        th.Property("uid", th.IntegerType),
         th.Property("user_id", th.IntegerType),
-        th.Property("wid", th.IntegerType),
+        th.Property("username", th.StringType),
         th.Property("workspace_id", th.IntegerType),
     ).to_dict()
 
-    def get_url_params(
-            self,
-            context: dict | None,  # noqa: ARG002
-            next_page_token: t.Any | None,  # noqa: ANN401
-    ) -> dict[str, t.Any]:
-        """Return a dictionary of values to be used in URL parameterization.
+    def prepare_request_payload(
+        self,
+        context: dict | None,
+        next_page_token: _TToken | None,
+    ) -> dict | None:
+        """Prepare the data payload for the REST API request.
 
         Args:
-            context: The stream context.
-            next_page_token: The next page index or value.
+            context: Stream partition or context dictionary.
+            next_page_token: Token, page number or any request argument to request the
+                next page of data.
+        """
+        payload = {
+            "start_date": self.config.get("start_date"),
+            "end_date": self.config.get("end_date"),
+            "page_size": 10000,
+        }
+
+        if next_page_token:
+            payload["first_row_number"] = int(next_page_token)
+
+        return payload
+
+    def get_new_paginator(self) -> BaseAPIPaginator:
+        """Get a fresh paginator for this API endpoint.
 
         Returns:
-            A dictionary of URL query parameters.
+            A paginator instance.
         """
-        if self.config.get("start_date"):
-            return {"since": self.start_time_to_epoch(self.config.get("start_date"))}
-        else:
-            return {}
+        return SimpleHeaderPaginator("X-Next-Row-Number")
+
+    def parse_response(self, response: requests.Response) -> t.Iterable[dict]:
+        """Parse the response and return an iterator of result records.
+
+        Args:
+            response: A raw :class:`requests.Response`
+
+        Yields:
+            One item for every item found in the response.
+        """
+        data = response.json()
+        records = extract_jsonpath(self.records_jsonpath, input=data)
+        for record in records:
+            for time_entry in record.get('time_entries', []):
+                del record["time_entries"]
+                record = {**record, **time_entry}
+                yield record
+
+    def post_process(
+        self,
+        row: dict,
+        context: dict | None = None,  # noqa: ARG002
+    ) -> dict | None:
+        """Append or transform raw data to match expected structure."""
+        row["workspace_id"] = context["workspace_id"]
+        return row

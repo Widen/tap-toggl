@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from singer_sdk import Tap
 from singer_sdk import typing as th
 
@@ -32,15 +34,17 @@ class TapToggl(Tap):
             "start_date",
             th.DateTimeType,
             required=False,
-            default="",
+            default=datetime.now().strftime("%Y-%m-%d"),
             description="The earliest record date to sync. In the format YYYY-MM-DD.",
         ),
         th.Property(
-            "user_agent",
-            th.StringType,
+            "end_date",
+            th.DateTimeType,
             required=False,
-            default="",
-            description="Inserts a user agent into the request header",
+            default=datetime.now().strftime("%Y-%m-%d"),
+            description="The latest record date to sync. In the format YYYY-MM-DD. "
+                        "If not provided the Toggl API will default to 7 days "
+                        "from the start date.",
         ),
     ).to_dict()
 

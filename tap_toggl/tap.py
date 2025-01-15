@@ -37,6 +37,15 @@ class TapToggl(Tap):
             default=datetime.now().strftime("%Y-%m-%d"),
             description="The earliest record date to sync. In the format YYYY-MM-DD.",
         ),
+        th.Property(
+            "end_date",
+            th.DateTimeType,
+            required=False,
+            default=datetime.now().strftime("%Y-%m-%d"),
+            description="The latest record date to sync. In the format YYYY-MM-DD. "
+                        "If not provided the Toggl API will default to 7 days "
+                        "from the start date.",
+        ),
     ).to_dict()
 
     def discover_streams(self) -> list[streams.TogglStream]:
